@@ -1,130 +1,38 @@
 "use client";
+// ============================================================
+// 루트 페이지 — 로그인 여부에 따라 자동 리다이렉트
+// ============================================================
 
-import { useEffect, useState } from "react";
-import {
-  signInWithPopup,
-  signOut,
-  onAuthStateChanged,
-} from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { auth, provider, db } from "../lib/firebase";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthContext } from "@/context/AuthContext";
 
-export default function Home() {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+export default function RootPage() {
+  const router = useRouter();
+  const { firebaseUser, loading } = useAuthContext();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const login = async () => {
-    try {
-      const result = await signInWithPopup(auth, provider);
-
-      const user = result.user;
-
-      await setDoc(
-        doc(db, "users", user.uid),
-        {
-          uid: user.uid,
-          name: user.displayName,
-          email: user.email,
-          photoURL: user.photoURL,
-          lastLogin: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-
-      setUser(user);
-    } catch (error) {
-      console.error("로그인 오류:", error);
+    if (loading) return;
+    if (firebaseUser) {
+      router.replace("/dashboard");
+    } else {
+      router.replace("/login");
     }
-  };
-
-  const logout = async () => {
-    await signOut(auth);
-  };
-
-  if (loading) {
-    return (
-      <main style={{ padding: "40px" }}>
-        <h2>로딩 중...</h2>
-      </main>
-    );
-  }
+  }, [firebaseUser, loading, router]);
 
   return (
-    <main
-      style={{
-        padding: "40px",
-        maxWidth: "800px",
-        margin: "0 auto",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <h1>경남 네트워크 플랫폼</h1>
-
-      {!user ? (
-        <button
-          onClick={login}
-          style={{
-            padding: "12px 24px",
-            backgroundColor: "#2563eb",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-            fontSize: "18px",
-          }}
-        >
-          Google 로그인
-        </button>
-      ) : (
-        <>
-          <h2>환영합니다.</h2>
-
-          {user.photoURL && (
-            <img
-              src={user.photoURL}
-              alt=""
-              width={120}
-              height={120}
-              style={{
-                borderRadius: "50%",
-                marginBottom: "20px",
-              }}
-            />
-          )}
-
-          <p>
-            <strong>이름:</strong> {user.displayName}
-          </p>
-
-          <p>
-            <strong>이메일:</strong> {user.email}
-          </p>
-
-          <button
-            onClick={logout}
-            style={{
-              marginTop: "20px",
-              padding: "10px 20px",
-              backgroundColor: "#dc2626",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-            }}
-          >
-            로그아웃
-          </button>
-        </>
-      )}
-    </main>
+    <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)]">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg">
+          <span className="text-white font-bold text-xl">경</span>
+        </div>
+        <p className="text-sm text-slate-500 dark:text-slate-400">경남 지산학연 네트워크 플랫폼</p>
+        <div className="flex gap-1">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="w-2 h-2 rounded-full bg-blue-400 animate-pulse-dot" style={{ animationDelay: `${i * 0.2}s` }} />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
