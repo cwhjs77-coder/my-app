@@ -25,7 +25,7 @@ export function useAuth() {
   const [error, setError] = useState<string | null>(null);
 
   // ─── Google 로그인 ───
-  async function loginWithGoogle() {
+  async function loginWithGoogle(): Promise<boolean> {
     setLoading(true);
     setError(null);
     try {
@@ -60,36 +60,44 @@ export function useAuth() {
           { merge: true }
         );
       }
+      return true;
     } catch (err: any) {
       console.error("[useAuth] Google 로그인 오류:", err);
       setError("Google 로그인에 실패했습니다. 다시 시도해주세요.");
+      return false;
     } finally {
       setLoading(false);
     }
   }
 
   // ─── 이메일/비밀번호 로그인 ───
-  async function loginWithEmail(email: string, password: string) {
+  async function loginWithEmail(email: string, password: string): Promise<boolean> {
     setLoading(true);
     setError(null);
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
-      const user = result.user;
-
       await setDoc(
-        doc(db, "users", user.uid),
+        doc(db, "users", result.user.uid),
         { lastLogin: serverTimestamp() },
         { merge: true }
       );
+      return true;
     } catch (err: any) {
       console.error("[useAuth] 이메일 로그인 오류:", err);
-      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
+      // Firebase v9+: auth/wrong-password·auth/user-not-found → auth/invalid-credential 로 통합
+      if (
+        err.code === "auth/invalid-credential" ||
+        err.code === "auth/user-not-found" ||
+        err.code === "auth/wrong-password" ||
+        err.code === "auth/invalid-email"
+      ) {
         setError("이메일 또는 비밀번호가 올바르지 않습니다.");
       } else if (err.code === "auth/too-many-requests") {
         setError("너무 많은 로그인 시도가 있었습니다. 잠시 후 다시 시도해주세요.");
       } else {
         setError("로그인에 실패했습니다. 다시 시도해주세요.");
       }
+      return false;
     } finally {
       setLoading(false);
     }

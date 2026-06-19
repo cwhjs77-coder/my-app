@@ -19,18 +19,18 @@ export default function LoginForm() {
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
     clearError();
-    await loginWithEmail(email, password);
-    // 로그인 성공 시 AuthContext에서 userProfile이 로드되면 대시보드로 이동
-    // onAuthStateChanged가 처리하므로 여기서는 단순 리다이렉트
-    if (!error) {
+    const success = await loginWithEmail(email, password);
+    if (success) {
       router.push("/dashboard");
     }
   }
 
   async function handleGoogleLogin() {
     clearError();
-    await loginWithGoogle();
-    router.push("/dashboard");
+    const success = await loginWithGoogle();
+    if (success) {
+      router.push("/dashboard");
+    }
   }
 
   return (
