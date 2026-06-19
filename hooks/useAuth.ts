@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import {
-  signInWithPopup,
+  signInWithRedirect,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -24,46 +24,25 @@ export function useAuth() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ─── Google 로그인 ───
+  // ─── Google 로그인 (Redirect 방식 — 팝업 차단 우회, 모바일 호환)
+  // signInWithRedirect는 페이지를 Google로 이동시키므로 반환값 없음.
+  // 리다이렉트 후 결과 처리는 AuthContext의 getRedirectResult가 담당.
   async function loginWithGoogle(): Promise<boolean> {
     setLoading(true);
     setError(null);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-
-      // 최초 로그인 시 Firestore에 사용자 문서 생성
-      const userDocRef = doc(db, "users", user.uid);
-      const snapshot = await getDoc(userDocRef);
-
-      if (!snapshot.exists()) {
-        // 최고 관리자 UID인지 확인
-        const isAdminUid = user.uid === process.env.NEXT_PUBLIC_ADMIN_UID;
-        const role: UserRole = isAdminUid ? "admin" : "member";
-
-        const profile: Omit<UserProfile, "uid"> = {
-          name: user.displayName || "이름없음",
-          email: user.email || "",
-          photoURL: user.photoURL || "",
-          role,
-          approved: role === "admin" ? true : role === "member" ? true : false,
-          interests: [],
-          createdAt: serverTimestamp() as any,
-          lastLogin: serverTimestamp() as any,
-        };
-        await setDoc(userDocRef, profile);
-      } else {
-        // 로그인 시간 업데이트
-        await setDoc(
-          userDocRef,
-          { lastLogin: serverTimestamp() },
-          { merge: true }
-        );
-      }
-      return true;
+      await signInWithRedirect(auth, googleProvider);
+      return true; // 실제로는 redirect 발생 — 이 줄은 실행되지 않음
     } catch (err: any) {
-      console.error("[useAuth] Google 로그인 오류:", err);
-      setError("Google 로그인에 실패했습니다. 다시 시도해주세요.");
+      console.error("[useAuth] Google 로그인 오류:", err.code, err.message);
+      if (err.code === "auth/unauthorized-domain") {
+        setError(
+          "이 도메인은 Firebase에서 승인되지 않았습니다. " +
+          "Firebase Console → Authentication → Authorized Domains에 현재 도메인을 추가해주세요."
+        );
+      } else {
+        setError("Google 로그인에 실패했습니다. 다시 시도해주세요.");
+      }
       return false;
     } finally {
       setLoading(false);

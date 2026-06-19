@@ -27,10 +27,9 @@ export default function LoginForm() {
 
   async function handleGoogleLogin() {
     clearError();
-    const success = await loginWithGoogle();
-    if (success) {
-      router.push("/dashboard");
-    }
+    // signInWithRedirect: 페이지가 Google로 이동하므로 router.push 불필요
+    // 복귀 후 LoginPage의 useEffect가 /dashboard로 리다이렉트
+    await loginWithGoogle();
   }
 
   return (

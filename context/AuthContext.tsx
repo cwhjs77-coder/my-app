@@ -5,10 +5,14 @@
 // ============================================================
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
+import {
+  onAuthStateChanged,
+  getRedirectResult,
+  User as FirebaseUser,
+} from "firebase/auth";
+import { doc, onSnapshot, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { UserProfile } from "@/types";
+import { UserProfile, UserRole } from "@/types";
 import { useFCM } from "@/hooks/useFCM";
 
 // ─────────────────────────────────────────────────────────────
@@ -58,6 +62,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // ─── Google Redirect 결과 처리 (페이지 복귀 후 1회 실행) ─────
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (!result?.user) return;
+        const user = result.user;
+        const userDocRef = doc(db, "users", user.uid);
+        const snapshot = await getDoc(userDocRef);
+        const isAdminUid = user.uid === process.env.NEXT_PUBLIC_ADMIN_UID;
+        const role: UserRole = isAdminUid ? "admin" : "member";
+
+        if (!snapshot.exists()) {
+          await setDoc(userDocRef, {
+            name: user.displayName || "이름없음",
+            email: user.email || "",
+            photoURL: user.photoURL || "",
+            role,
+            approved: true,
+            interests: [],
+            createdAt: serverTimestamp(),
+            lastLogin: serverTimestamp(),
+          });
+        } else {
+          await setDoc(userDocRef, { lastLogin: serverTimestamp() }, { merge: true });
+        }
+      })
+      .catch((err) => console.error("[AuthContext] getRedirectResult 오류:", err));
+  }, []);
 
   useEffect(() => {
     // Firebase Auth 상태 변화 감지
