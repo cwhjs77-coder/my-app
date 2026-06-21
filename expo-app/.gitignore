@@ -1,0 +1,17 @@
+node_modules/
+.expo/
+dist/
+web-build/
+
+# 환경변수 — 절대 커밋 금지
+.env
+.env.local
+.env.*.local
+
+# Firebase 서비스 계정
+google-services.json
+GoogleService-Info.plist
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,40 @@
+
+> gyeongnam-network-platform@1.0.0 dev
+> next dev
+
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://172.20.10.2:3000
+- Environments: .env.local
+✓ Ready in 948ms
+
+ GET / 200 in 514ms (next.js: 233ms, application-code: 281ms)
+  Reload env: .env.local
+ GET / 200 in 654ms (next.js: 293ms, application-code: 361ms)
+ GET /manifest.json 404 in 2.3s (next.js: 2.2s, application-code: 102ms)
+ GET /login 200 in 2.1s (next.js: 2.0s, application-code: 65ms)
+ GET /manifest.json 404 in 58ms (next.js: 8ms, application-code: 50ms)
+ GET /dashboard 200 in 2.0s (next.js: 1951ms, application-code: 72ms)
+ GET /dashboard 200 in 56ms (next.js: 6ms, application-code: 50ms)
+ GET /manifest.json 404 in 131ms (next.js: 36ms, application-code: 96ms)
+ GET /dashboard/human-resources 200 in 806ms (next.js: 778ms, application-code: 29ms)
+ GET /manifest.json 404 in 73ms (next.js: 10ms, application-code: 63ms)
+ GET /manifest.json 404 in 67ms (next.js: 8ms, application-code: 59ms)
+ GET /dashboard/physical-resources 200 in 1224ms (next.js: 1158ms, application-code: 66ms)
+ GET /manifest.json 404 in 68ms (next.js: 10ms, application-code: 58ms)
+ GET /manifest.json 404 in 95ms (next.js: 18ms, application-code: 77ms)
+ GET /dashboard/organizations 200 in 861ms (next.js: 832ms, application-code: 29ms)
+ GET /manifest.json 404 in 77ms (next.js: 17ms, application-code: 60ms)
+ GET /manifest.json 404 in 115ms (next.js: 10ms, application-code: 104ms)
+ GET /dashboard/networking 200 in 1009ms (next.js: 985ms, application-code: 24ms)
+ GET /manifest.json 404 in 76ms (next.js: 40ms, application-code: 36ms)
+ GET /manifest.json 404 in 75ms (next.js: 20ms, application-code: 55ms)
+ GET /dashboard/networking 200 in 32ms (next.js: 3ms, application-code: 28ms)
+ GET /manifest.json 404 in 55ms (next.js: 8ms, application-code: 47ms)
+ GET /manifest.json 404 in 59ms (next.js: 8ms, application-code: 51ms)
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://172.30.1.82:3000
+- Environments: .env.local
+✓ Ready in 1012ms
+

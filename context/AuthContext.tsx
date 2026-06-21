@@ -1,100 +1,83 @@
 "use client";
+
 // ============================================================
-// 인증(Auth) Context
-// 로그인 상태, 사용자 프로필, FCM 토큰 등록을 전역 관리합니다.
+// AuthContext — Firebase 인증 상태 + Firestore 프로필 전역 관리
+// ============================================================
+// [핵심] FCMConnector 는 firebase/messaging 을 사용하므로 브라우저 전용입니다.
+// next/dynamic + ssr:false 로 서버 렌더링에서 완전히 제외합니다.
 // ============================================================
 
 import React, { createContext, useContext, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   onAuthStateChanged,
   getRedirectResult,
   User as FirebaseUser,
 } from "firebase/auth";
-import { doc, onSnapshot, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import {
+  doc,
+  onSnapshot,
+  setDoc,
+  getDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { UserProfile, UserRole } from "@/types";
-import { useFCM } from "@/hooks/useFCM";
 
-// ─────────────────────────────────────────────────────────────
-// Context 타입 정의
-// ─────────────────────────────────────────────────────────────
+// ── FCMConnector: SSR 에서 완전히 제외 (firebase/messaging 은 브라우저 전용)
+// ssr:false 를 지정하지 않으면 서버가 firebase/messaging 을 평가하다 충돌합니다.
+const FCMConnector = dynamic(
+  () => import("@/components/FCMConnector"),
+  { ssr: false }
+);
+
+// ── 컨텍스트 타입
 interface AuthContextType {
-  /** Firebase Auth의 기본 사용자 객체 */
-  firebaseUser: FirebaseUser | null;
-  /** Firestore에서 읽어온 상세 프로필 */
-  userProfile: UserProfile | null;
-  /** 초기 로딩 중 여부 */
-  loading: boolean;
-  /** 관리자 여부 (role===admin 또는 ADMIN_UID 일치) */
-  isAdmin: boolean;
-  /** 승인된 담당자(manager) 여부 */
+  firebaseUser:      FirebaseUser | null;
+  userProfile:       UserProfile  | null;
+  loading:           boolean;
+  isAdmin:           boolean;
   isApprovedManager: boolean;
-  /** Firebase ID 토큰 비동기 반환 (API 호출 시 Authorization 헤더용) */
-  getIdToken: () => Promise<string | null>;
+  getIdToken:        () => Promise<string | null>;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Context 생성 (기본값)
-// ─────────────────────────────────────────────────────────────
 const AuthContext = createContext<AuthContextType>({
-  firebaseUser: null,
-  userProfile: null,
-  loading: true,
-  isAdmin: false,
+  firebaseUser:      null,
+  userProfile:       null,
+  loading:           true,
+  isAdmin:           false,
   isApprovedManager: false,
-  getIdToken: async () => null,
+  getIdToken:        async () => null,
 });
 
-// ─────────────────────────────────────────────────────────────
-// FCM 연결 내부 컴포넌트
-// AuthProvider 안에서 uid를 받아 useFCM 훅을 실행합니다.
-// (훅은 컴포넌트 최상위에서만 호출 가능하므로 분리)
-// ─────────────────────────────────────────────────────────────
-function FCMConnector({ uid }: { uid: string | undefined }) {
-  useFCM(uid);
-  return null;
-}
-
-// ─────────────────────────────────────────────────────────────
-// AuthProvider
-// ─────────────────────────────────────────────────────────────
+// ── AuthProvider
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [userProfile,  setUserProfile]  = useState<UserProfile  | null>(null);
+  const [loading,      setLoading]      = useState(true);
 
-  // ─── Google Redirect 결과 처리 (페이지 복귀 후 1회 실행) ─────
+  // ── signInWithRedirect 복귀 처리
+  // Redirect 방식 Google 로그인 후 앱으로 돌아오면 결과를 회수합니다.
+  // Firestore 처리는 아래 onAuthStateChanged 에서 수행합니다.
   useEffect(() => {
     getRedirectResult(auth)
-      .then(async (result) => {
-        if (!result?.user) return;
-        const user = result.user;
-        const userDocRef = doc(db, "users", user.uid);
-        const snapshot = await getDoc(userDocRef);
-        const isAdminUid = user.uid === process.env.NEXT_PUBLIC_ADMIN_UID;
-        const role: UserRole = isAdminUid ? "admin" : "member";
-
-        if (!snapshot.exists()) {
-          await setDoc(userDocRef, {
-            name: user.displayName || "이름없음",
-            email: user.email || "",
-            photoURL: user.photoURL || "",
-            role,
-            approved: true,
-            interests: [],
-            createdAt: serverTimestamp(),
-            lastLogin: serverTimestamp(),
-          });
-        } else {
-          await setDoc(userDocRef, { lastLogin: serverTimestamp() }, { merge: true });
+      .then((result) => {
+        if (result?.user) {
+          console.log("[AuthContext] Google redirect 로그인 완료:", result.user.email);
         }
       })
-      .catch((err) => console.error("[AuthContext] getRedirectResult 오류:", err));
+      .catch((err) => {
+        const code: string = err?.code ?? "unknown";
+        // auth/no-auth-event 는 redirect 가 아닌 일반 페이지 로드 시 항상 발생 — 무시
+        if (code !== "auth/no-auth-event") {
+          console.error("[AuthContext] getRedirectResult 오류:", code, err?.message);
+        }
+      });
   }, []);
 
+  // ── 인증 상태 변화 감지 + Firestore 사용자 문서 관리
   useEffect(() => {
-    // Firebase Auth 상태 변화 감지
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user);
 
       if (!user) {
@@ -103,10 +86,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Firestore 사용자 프로필 실시간 구독
-      const userDocRef = doc(db, "users", user.uid);
-      const unsubscribeProfile = onSnapshot(
-        userDocRef,
+      // ── Firestore 사용자 문서 생성/업데이트 (async IIFE)
+      // 이 IIFE 안에서 발생한 Firestore 오류는 로그인 흐름 전체를 막지 않습니다.
+      (async () => {
+        try {
+          const userRef = doc(db, "users", user.uid);
+          const snap    = await getDoc(userRef);
+
+          if (!snap.exists()) {
+            // 신규 Google 사용자 → 문서 자동 생성
+            const isGoogleUser = user.providerData.some(
+              (p) => p.providerId === "google.com"
+            );
+            if (isGoogleUser) {
+              const isAdminUid  = user.uid === process.env.NEXT_PUBLIC_ADMIN_UID;
+              const role: UserRole = isAdminUid ? "admin" : "member";
+              await setDoc(userRef, {
+                name:      user.displayName ?? "이름없음",
+                email:     user.email       ?? "",
+                photoURL:  user.photoURL    ?? "",
+                role,
+                approved:  true,
+                interests: [],
+                createdAt: serverTimestamp(),
+                lastLogin: serverTimestamp(),
+              });
+            }
+          } else {
+            // 기존 사용자 → 마지막 로그인 시각만 갱신 (role/approved 변경 없음)
+            await setDoc(
+              userRef,
+              { lastLogin: serverTimestamp() },
+              { merge: true }
+            );
+          }
+        } catch (e: any) {
+          console.error("[AuthContext] Firestore 문서 처리 오류:", e?.code, e?.message);
+        }
+      })();
+
+      // ── Firestore 사용자 프로필 실시간 구독
+      const userRef      = doc(db, "users", user.uid);
+      const unsubProfile = onSnapshot(
+        userRef,
         (snapshot) => {
           if (snapshot.exists()) {
             setUserProfile({ uid: snapshot.id, ...snapshot.data() } as UserProfile);
@@ -115,20 +137,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           setLoading(false);
         },
-        (error) => {
-          console.error("[AuthContext] Firestore 구독 오류:", error);
+        (err) => {
+          console.error("[AuthContext] Firestore 구독 오류:", err?.code, err?.message);
           setLoading(false);
         }
       );
 
-      // cleanup: Auth 리스너 제거 시 Profile 리스너도 해제
-      return () => unsubscribeProfile();
+      return () => unsubProfile();
     });
 
-    return () => unsubscribeAuth();
+    return () => unsubAuth();
   }, []);
 
-  // ─── 편의 플래그 ────────────────────────────────────────────
+  // ── 파생 권한
   const isAdmin =
     userProfile?.role === "admin" ||
     firebaseUser?.uid === process.env.NEXT_PUBLIC_ADMIN_UID;
@@ -136,7 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isApprovedManager =
     userProfile?.role === "manager" && userProfile?.approved === true;
 
-  // ─── Firebase ID 토큰 반환 (관리자 API 호출용) ───────────────
+  // ── Firebase ID 토큰 (API Route 인증용)
   async function getIdToken(): Promise<string | null> {
     if (!firebaseUser) return null;
     try {
@@ -158,16 +179,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         getIdToken,
       }}
     >
-      {/* FCM 토큰 자동 등록 — 로그인된 사용자에게만 */}
+      {/* FCMConnector: ssr:false 로 서버에서 절대 실행되지 않음 */}
       <FCMConnector uid={firebaseUser?.uid} />
       {children}
     </AuthContext.Provider>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// 커스텀 훅 — 컴포넌트에서 간편하게 사용
-// ─────────────────────────────────────────────────────────────
 export function useAuthContext() {
   return useContext(AuthContext);
 }

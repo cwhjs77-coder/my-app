@@ -1,22 +1,11 @@
 "use client";
-// ============================================================
-// 대시보드 레이아웃 — 로그인 보호 + 헤더 + 탭바 공통 래핑
-// ============================================================
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const { firebaseUser, loading } = useAuthContext();
-
-  // 비로그인 접근 차단
-  useEffect(() => {
-    if (!loading && !firebaseUser) {
-      router.replace("/login");
-    }
-  }, [firebaseUser, loading, router]);
+  const router = useRouter();
 
   if (loading) {
     return (
@@ -31,7 +20,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!firebaseUser) return null;
-
-  return <>{children}</>;
+  return (
+    <div className="flex flex-col min-h-screen">
+      {/* 비로그인 게스트 안내 배너 */}
+      {!firebaseUser && (
+        <div className="sticky top-0 z-50 w-full bg-blue-600 text-white text-sm py-2 px-4 flex items-center justify-between gap-2">
+          <span className="truncate">
+            게스트 모드 — 전체 기능 이용을 위해 로그인하세요
+          </span>
+          <button
+            onClick={() => router.push("/login")}
+            className="shrink-0 bg-white text-blue-600 font-semibold text-xs px-3 py-1 rounded-full hover:bg-blue-50 transition-colors"
+          >
+            로그인
+          </button>
+        </div>
+      )}
+      {children}
+    </div>
+  );
 }
