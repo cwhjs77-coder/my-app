@@ -11,7 +11,7 @@ if (!apiKey) {
 }
 
 export const firebaseConfig = {
-  apiKey: apiKey || "AIzaSyCJhzoFv-XS11lhx_jPDAQegW8OBDTIqb0",
+  apiKey: "AIzaSyCJhzoFv-XS11lhx_jPDAQegW8OBDTIqb0",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
