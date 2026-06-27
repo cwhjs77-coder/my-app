@@ -38,3 +38,25 @@
 - Environments: .env.local
 ✓ Ready in 1012ms
 
+ GET / 307 in 2.4s (next.js: 1863ms, application-code: 571ms)
+ GET /dashboard 200 in 613ms (next.js: 213ms, application-code: 400ms)
+ GET / 307 in 591ms (next.js: 219ms, application-code: 372ms)
+ GET /dashboard 200 in 110ms (next.js: 33ms, application-code: 77ms)
+ GET /dashboard/networking 200 in 1190ms (next.js: 880ms, application-code: 310ms)
+ GET /dashboard/organizations 200 in 792ms (next.js: 439ms, application-code: 353ms)
+ GET /dashboard/human-resources 200 in 704ms (next.js: 522ms, application-code: 181ms)
+ GET /dashboard/networking 200 in 496ms (next.js: 111ms, application-code: 385ms)
+ GET /dashboard 200 in 79ms (next.js: 50ms, application-code: 29ms)
+ GET /dashboard 200 in 64ms (next.js: 12ms, application-code: 52ms)
+○ Compiling /dashboard/admin ...
+ GET /dashboard/admin 200 in 14.9s (next.js: 10.7s, application-code: 4.1s)
+ GET /dashboard/chat 200 in 13.8s (next.js: 13.3s, application-code: 491ms)
+ GET /dashboard/notices 200 in 12.9s (next.js: 12.0s, application-code: 916ms)
+ GET /dashboard/admin 200 in 357ms (next.js: 19ms, application-code: 337ms)
+ GET /dashboard/admin 200 in 276ms (next.js: 17ms, application-code: 259ms)
+ GET /dashboard/admin 200 in 271ms (next.js: 131ms, application-code: 140ms)
+ GET / 307 in 627ms (next.js: 215ms, application-code: 412ms)
+ GET /dashboard 200 in 223ms (next.js: 32ms, application-code: 191ms)
+  Reload env: .env.local
+ GET /dashboard 200 in 231ms (next.js: 177ms, application-code: 54ms)
+[?25h

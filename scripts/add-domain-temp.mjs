@@ -4,7 +4,7 @@ import { cert, initializeApp } from "firebase-admin/app";
 const sa = JSON.parse(readFileSync("C:/Users/user/Downloads/gyeongnam-network-platform-firebase-adminsdk-fbsvc-51db57ec0b.json", "utf8"));
 const app = initializeApp({ credential: cert(sa) });
 const projectId = "gyeongnam-network-platform";
-const newDomain = "my-1xivvd14y-cwhjs77-2806s-projects.vercel.app";
+const newDomain = process.argv[2] ?? "my-app-inky-nine-80.vercel.app";
 
 const token = await app.options.credential.getAccessToken();
 const res = await fetch(`https://identitytoolkit.googleapis.com/admin/v2/projects/${projectId}/config`, {
